@@ -1,0 +1,6 @@
+[submodule "thirdparty/emphf"]
+	path = thirdparty/emphf
+	url = https://github.com/ot/emphf
+[submodule "thirdparty/streamvbyte"]
+	path = thirdparty/streamvbyte
+	url = https://github.com/lemire/streamvbyte

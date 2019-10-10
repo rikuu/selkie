@@ -1,0 +1,4 @@
+*.o
+build-index
+elmeri-dot
+candidates
