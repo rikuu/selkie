@@ -1,4 +1,5 @@
 #include <vector>
+#include <iostream>
 
 #include "lmer_reader.hpp"
 
@@ -49,7 +50,16 @@ std::vector<std::vector<int> > extract_lmers(
         double frag = filtered_cuts[jj+1]-filtered_cuts[jj];
         lmer.push_back(quantize(frag));
     }
-    lmers.push_back(lmer);
+
+    if (lmer.size() >= mink) {
+#ifdef DEBUG
+      for (int iii = 0; iii < lmer.size(); iii++) {
+	std::cout << "," << lmer[iii];
+      }
+      std::cout << std::endl;
+#endif
+      lmers.push_back(lmer);
+    }
 
     // Current offset for the gap pattern in kbp
     double start_pos = 0.0;
@@ -122,7 +132,16 @@ std::vector<std::vector<int> > extract_lmers(
             double frag = filtered_cuts[jj+1]-filtered_cuts[jj];
             lmerr.push_back(quantize(frag));
         }
-        lmers.push_back(lmerr);
+
+	if (lmerr.size() >= mink) {
+#ifdef DEBUG
+	  for (int iii = 0; iii < lmerr.size(); iii++) {
+	    std::cout << "," << lmerr[iii];
+	  }
+	  std::cout << std::endl;
+#endif
+	  lmers.push_back(lmerr);
+	}
     }
 
     return lmers;
