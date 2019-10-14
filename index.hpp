@@ -39,8 +39,8 @@ public:
             mphf_t(key_file).swap(m_mphf);
 
             emphf::logger() << "Constructing mergetable" << std::endl;
-            // m_merge = mergetable_t(m_n, key_file, m_mphf);
-            m_merge = mergetable_t(m_n);
+	    // m_merge = mergetable_t(m_n, key_file, m_mphf);
+	    m_merge = mergetable_t(m_n);
         }
 
         {
@@ -48,9 +48,19 @@ public:
             emphf::logger() << "Gathering lists" << std::endl;
             std::vector<std::vector<uint32_t> > lists = gather_lists(in);
 
+#ifdef DEBUG
+	    for(int i = 0; i < lists.size(); i++) {
+	      for(int j = 0; j < lists[i].size(); j++) {
+		std::cout << "," << lists[i][j];
+	      }
+	      std::cout << std::endl;
+	    }
+#endif
+
             emphf::logger() << "Compressing lists" << std::endl;
             compress_lists(lists);
-        }
+
+	}
     }
 
     void save(std::ostream &os) const;
@@ -126,10 +136,13 @@ size_t index_t::get_related(const std::vector<double> rmap, std::vector<std::pai
     uint32_t *delta_buffer = (uint32_t *) calloc(m_max_list_length, sizeof(uint32_t));
 
     std::vector<related> friends;
+    std::set<uint64_t> used_lmers;
     for (auto it = lmers.begin(); it != lmers.end(); ++it) {
-        size_t out_size = 0, in_size = 0;
-        uint8_t *v = get_values(*it, &out_size, &in_size);
-        streamvbyte_decode(v, delta_buffer, out_size);
+      uint64_t u = m_mphf.lookup(*it);
+      if (used_lmers.find(u) == used_lmers.end()) {
+	size_t out_size = 0, in_size = 0;
+	uint8_t *v = get_values(*it, &out_size, &in_size);
+	streamvbyte_decode(v, delta_buffer, out_size);
         
         for (size_t i = 1; i < out_size; i++) {
             delta_buffer[i] = delta_buffer[i-1] + delta_buffer[i];
@@ -142,6 +155,8 @@ size_t index_t::get_related(const std::vector<double> rmap, std::vector<std::pai
             r.related_pos = 0;
             friends.push_back(r);
         }
+      }
+      used_lmers.insert(u);
     }
 
     free(delta_buffer);
@@ -197,10 +212,13 @@ std::vector<std::vector<uint32_t> > index_t::gather_lists(const std::string &in)
             if (u >= m_merge.size()) //m_n)
                 continue;
 
-            if (m_merge.merged(u))
+            if (m_merge.merged(u)) {
+	      if (lists[m_merge.rank(u)+1].size() == 0 || lists[m_merge.rank(u)+1].back() != (uint32_t) i*2)
                 lists[m_merge.rank(u)+1].push_back((uint32_t) i*2);
-            else
+            } else {
+	      if (lists[u+1].size() == 0 || lists[u+1].back() != (uint32_t) i*2)
                 lists[u+1].push_back((uint32_t) i*2);
+	    }
         }
 
         std::vector<std::vector<int> > lmers_r = extract_lmers(reverse[i], m_ell, m_mink, m_gap_pattern);
@@ -211,10 +229,13 @@ std::vector<std::vector<uint32_t> > index_t::gather_lists(const std::string &in)
             if (u >= m_merge.size()) //m_n)
                 continue;
 
-            if (m_merge.merged(u))
+            if (m_merge.merged(u)) {
+	      if (lists[m_merge.rank(u)+1].size() == 0 || lists[m_merge.rank(u)+1].back() != (uint32_t) (i*2) + 1)
                 lists[m_merge.rank(u)+1].push_back((uint32_t) (i*2) + 1);
-            else
+            } else {
+	      if (lists[u+1].size() == 0 || lists[u+1].back() != (uint32_t) (i*2) + 1)
                 lists[u+1].push_back((uint32_t) (i*2) + 1);
+	    }
         }
     }
 

@@ -147,7 +147,14 @@ size_t multiwaymerge(const std::string &out, int n_parts) {
 
         if (eq_lmer(min_lmer, prev))
             continue;
-        
+
+#ifdef DEBUG
+	for (size_t i = 0; i < min_lmer.size(); i++) {
+	  std::cout << "," << min_lmer[i];
+	}
+	std::cout << std::endl;
+#endif
+
         prev = min_lmer;
 
         correct_n++;
