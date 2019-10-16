@@ -39,7 +39,7 @@ public:
             mphf_t(key_file).swap(m_mphf);
 
             emphf::logger() << "Constructing mergetable" << std::endl;
-	    // m_merge = mergetable_t(m_n, key_file, m_mphf);
+	    //m_merge = mergetable_t(m_n, key_file, m_mphf);
 	    m_merge = mergetable_t(m_n);
         }
 

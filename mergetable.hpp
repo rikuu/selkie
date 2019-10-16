@@ -50,19 +50,19 @@ public:
     mergetable_t() {}
     
     mergetable_t(const size_t n) {
-        m_bv = sdsl::bit_vector(n, 0);
-        m_rank = sdsl::bit_vector::rank_1_type(&m_bv);
+        m_bv = new sdsl::bit_vector(n, 0);
+        m_rank = new sdsl::bit_vector::rank_1_type(m_bv);
         m_index = std::vector<uint64_t>();
     }
 
     mergetable_t(const size_t n, const std::string &key_file, mphf_t mphf);
 
     inline size_t size() const {
-        return m_bv.size();
+        return m_bv->size();
     }
 
     inline bool merged(const uint64_t u) const {
-        return m_bv[u];
+      return (*m_bv)[u];
     }
 
     inline uint64_t end(const uint64_t u) const {
@@ -70,11 +70,11 @@ public:
     }
 
     inline size_t rank(const uint64_t u) const {
-        return m_rank.rank(u+1) - 1;
+        return m_rank->rank(u+1) - 1;
     }
 
     void save(std::ostream& os) const {
-        m_bv.serialize(os);
+        m_bv->serialize(os);
 
         size_t n = m_index.size();
         os.write(reinterpret_cast<char const*>(&n), sizeof(size_t));
@@ -82,8 +82,9 @@ public:
     }
 
     void load(std::istream& is) {
-        m_bv.load(is);
-        m_rank = sdsl::bit_vector::rank_1_type(&m_bv);
+        m_bv = new sdsl::bit_vector(100, 0);
+        m_bv->load(is);
+        m_rank = new sdsl::bit_vector::rank_1_type(m_bv);
 
         size_t n = 0;
         is.read(reinterpret_cast<char*>(&n), sizeof(size_t));
@@ -93,8 +94,8 @@ public:
     }
 
 private:
-    sdsl::bit_vector m_bv;
-    sdsl::bit_vector::rank_1_type m_rank;
+    sdsl::bit_vector *m_bv;
+    sdsl::bit_vector::rank_1_type *m_rank;
     std::vector<uint64_t> m_index;
 };
 
@@ -227,16 +228,16 @@ mergetable_t::mergetable_t(const size_t n, const std::string &key_file, mphf_t m
     
     std::cout << n << " " << m << std::endl;
 
-    m_bv = sdsl::bit_vector(n, 0);
+    m_bv = new sdsl::bit_vector(n, 0);
     for (size_t i = 0; i < n; i++) {
         if (tree[i] == 0)
             continue;
         
-        m_bv[i] = 1;
+        (*m_bv)[i] = 1;
         m_index.push_back(tree[i]);
     }
 
-    m_rank = sdsl::bit_vector::rank_1_type(&m_bv);
+    m_rank = new sdsl::bit_vector::rank_1_type(m_bv);
 
     // emphf::logger() << "Finished merging" << std::endl;
 
