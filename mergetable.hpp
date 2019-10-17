@@ -70,7 +70,7 @@ public:
     }
 
     inline size_t rank(const uint64_t u) const {
-        return m_rank->rank(u+1) - 1;
+        return m_rank->rank(u) ;
     }
 
     void save(std::ostream& os) const {

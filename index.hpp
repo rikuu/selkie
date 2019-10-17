@@ -39,8 +39,8 @@ public:
             mphf_t(key_file).swap(m_mphf);
 
             emphf::logger() << "Constructing mergetable" << std::endl;
-	    //m_merge = mergetable_t(m_n, key_file, m_mphf);
-	    m_merge = mergetable_t(m_n);
+	    m_merge = mergetable_t(m_n, key_file, m_mphf);
+	    //m_merge = mergetable_t(m_n);
         }
 
         {
@@ -108,14 +108,14 @@ uint8_t *index_t::get_values(const std::vector<int> q, size_t *out_size, size_t 
 
     uint64_t s, s1, l, l1;
     if (!m_merge.merged(u)) {
-        uint64_t r = m_merge.rank(u) + 1;
+        uint64_t r = m_merge.rank(u);
         l = m_lengths_select.select(u+1 - r);
         l1 = m_lengths_select.select(u+2 - r);
         s = m_sizes_select.select(u+1 - r);
         s1 = m_sizes_select.select(u+2 - r);
     } else {
         uint32_t v = m_merge.end(u);
-        uint64_t r = m_merge.rank(v) + 1;
+        uint64_t r = m_merge.rank(v);
         l = m_lengths_select.select(v+1 - r);
         l1 = m_lengths_select.select(v+2 - r);
         s = m_sizes_select.select(v+1 - r);
@@ -213,8 +213,8 @@ std::vector<std::vector<uint32_t> > index_t::gather_lists(const std::string &in)
                 continue;
 
             if (m_merge.merged(u)) {
-	      if (lists[m_merge.rank(u)+1].size() == 0 || lists[m_merge.rank(u)+1].back() != (uint32_t) i*2)
-                lists[m_merge.rank(u)+1].push_back((uint32_t) i*2);
+	      if (lists[m_merge.end(u)+1].size() == 0 || lists[m_merge.end(u)+1].back() != (uint32_t) i*2)
+                lists[m_merge.end(u)+1].push_back((uint32_t) i*2);
             } else {
 	      if (lists[u+1].size() == 0 || lists[u+1].back() != (uint32_t) i*2)
                 lists[u+1].push_back((uint32_t) i*2);
@@ -230,8 +230,8 @@ std::vector<std::vector<uint32_t> > index_t::gather_lists(const std::string &in)
                 continue;
 
             if (m_merge.merged(u)) {
-	      if (lists[m_merge.rank(u)+1].size() == 0 || lists[m_merge.rank(u)+1].back() != (uint32_t) (i*2) + 1)
-                lists[m_merge.rank(u)+1].push_back((uint32_t) (i*2) + 1);
+	      if (lists[m_merge.end(u)+1].size() == 0 || lists[m_merge.end(u)+1].back() != (uint32_t) (i*2) + 1)
+                lists[m_merge.end(u)+1].push_back((uint32_t) (i*2) + 1);
             } else {
 	      if (lists[u+1].size() == 0 || lists[u+1].back() != (uint32_t) (i*2) + 1)
                 lists[u+1].push_back((uint32_t) (i*2) + 1);
