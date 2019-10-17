@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    int count_thrs = 1;
+    int count_thrs = 2;
 
     // Command line arguments
     char *in_filename = argv[1];
