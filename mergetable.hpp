@@ -317,6 +317,7 @@ mergetable_t::mergetable_t(const size_t n, const std::string &key_file, mphf_t m
 
     // emphf::logger() << "Finished merging" << std::endl;
 
+    delete [] u2lmer;
     free(tree);
     free(sizes);
 }
