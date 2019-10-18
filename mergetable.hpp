@@ -148,7 +148,8 @@ mergetable_t::mergetable_t(const size_t n, const std::string &key_file, mphf_t m
     }
 
     lmer_reader keys(key_file.c_str());
-    std::unordered_map<uint64_t, std::vector<int> > u2lmer;
+    std::vector<int> *u2lmer = new std::vector<int>[n];
+    //std::unordered_map<uint64_t, std::vector<int> > u2lmer;
     for (auto it = keys.begin(); it != keys.end(); ++it) {
       std::vector<int> lmer = *it;
       uint64_t u = mphf.lookup(lmer);
@@ -176,7 +177,7 @@ mergetable_t::mergetable_t(const size_t n, const std::string &key_file, mphf_t m
                     uint64_t v = mphf.lookup(lmer);
 
 		    bool ok = true;
-		    if (u2lmer.count(v) == 0)
+		    if (v >= n)
 		      ok = false;
 		    else {
 		      std::vector<int> vlmer = u2lmer[v];
@@ -232,7 +233,7 @@ mergetable_t::mergetable_t(const size_t n, const std::string &key_file, mphf_t m
                     lmer[col]++;
                     uint64_t v = mphf.lookup(lmer);
 		    bool ok = true;
-		    if (u2lmer.count(v) == 0)
+		    if (v >= n)
 		      ok = false;
 		    else {
 		      std::vector<int> vlmer = u2lmer[v];
