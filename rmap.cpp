@@ -4,8 +4,6 @@
 #include <vector>
 #include <string>
 
-#include <boost/algorithm/string.hpp>
-
 #define MIN_FRAGMENT_LEN 1.0
 
 size_t read_rmaps(const char *filename, std::vector<std::string> *names,
@@ -35,12 +33,26 @@ size_t read_rmaps(const char *filename, std::vector<std::string> *names,
 
         // Read the fragment lengths
         if (i == 1) {
-            std::vector<std::string> cols;
-            boost::split(cols, line, [](char c) {return c == '\t' || c == ' ';});
-            if (cols.size() < 3) {
+            std::vector<double> cols;
+            size_t j = 0;
+            while (j < line.length()) {
+                size_t k = 0;
+                while (j+k < line.length() && line[j+k] != ' ' && line[j+k] != '\t') {
+                    k++;
+                }
+
+                double f = atof(line.substr(j, k).c_str());
+                if (f > 0.0) {
+                    cols.push_back(f);
+                }
+                
+                j += k+1;
+            }
+
+            /*if (cols.size() < 3) {
                 std::cout << "Invalid fragment list: " << line << std::endl;
                 exit(2);
-            }
+            }*/
 
             // Turn the fragment lengths into a sequence of cut sites
             if (forward) {
@@ -48,10 +60,8 @@ size_t read_rmaps(const char *filename, std::vector<std::string> *names,
                 double s = 0.0;
                 cuts.push_back(s);
                 for (size_t j = 0; j < cols.size(); j++) {
-                    if (atof(cols[j].c_str()) <= 0.0)
-                        continue;
-                    s += atof(cols[j].c_str());
-                    if (atof(cols[j].c_str()) >= MIN_FRAGMENT_LEN)
+                    s += cols[j];
+                    if (cols[j] >= MIN_FRAGMENT_LEN)
                         cuts.push_back(s);
                 }
             
@@ -63,11 +73,9 @@ size_t read_rmaps(const char *filename, std::vector<std::string> *names,
                 std::vector<double> cuts;
                 double s = 0.0;
                 cuts.push_back(s);
-                for (size_t j = cols.size()-1; j >= 3; j--) {
-                    if (atof(cols[j].c_str()) <= 0.0)
-                        continue;
-                    s += atof(cols[j].c_str());
-                    if (atof(cols[j].c_str()) >= MIN_FRAGMENT_LEN)
+                for (size_t j = cols.size()-1; j != 0; j--) {
+                    s += cols[j];
+                    if (cols[j] >= MIN_FRAGMENT_LEN)
                         cuts.push_back(s);
                 }
             
