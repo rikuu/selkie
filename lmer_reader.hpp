@@ -9,7 +9,9 @@
 #include <fstream>
 #include <iterator>
 
-std::vector<std::vector<int> > extract_lmers(const std::vector<double> &cuts, int ell, int mink, const char *gap_pattern);
+std::vector<std::vector<int> > extract_lmers(const std::vector<double> &cuts,
+    const int ell, const int mink, const double quantization,
+    const char *gap_pattern);
 
 class lmer_iterator
     : public std::iterator<std::forward_iterator_tag, const std::vector<int> > {
@@ -88,18 +90,17 @@ private:
 class lmer_reader {
 public:
     lmer_reader(const std::string &filename) {
-        m_is = fopen(filename.c_str(), "rb"); //std::ifstream(filename, std::ios::binary);
+        m_is = fopen(filename.c_str(), "rb");
 
         if (!m_is) {
             throw std::invalid_argument("Error opening " + filename);
         }
 
-        // m_is.read(reinterpret_cast<char*>(&m_n), sizeof(size_t));
         fread(reinterpret_cast<char *>(&m_n), sizeof(size_t), 1, m_is);
     }
 
     ~lmer_reader() {
-        fclose(m_is); //m_is.close();
+        fclose(m_is);
     }
 
     lmer_iterator begin() const {

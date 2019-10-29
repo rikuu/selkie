@@ -3,12 +3,9 @@
 
 #include "lmer_reader.hpp"
 
-static inline int quantize(const double d) {
-    return (int) (d / 1.);
-}
-
 std::vector<std::vector<int> > extract_lmers(
-        const std::vector<double> &cuts, int ell, int mink, const char *gap_pattern) {
+        const std::vector<double> &cuts, const int ell, const int mink,
+        const double quantization, const char *gap_pattern) {
     std::vector<std::vector<int> > lmers;
 
     // No el-mer can be extracted because the Rmap is too short
@@ -48,17 +45,11 @@ std::vector<std::vector<int> > extract_lmers(
     std::vector<int> lmer;
     for (size_t jj = 0; jj < filtered_cuts.size()-1; jj++) {
         double frag = filtered_cuts[jj+1]-filtered_cuts[jj];
-        lmer.push_back(quantize(frag));
+        lmer.push_back((int) (frag / quantization));
     }
 
-    if (lmer.size() >= mink) {
-#ifdef DEBUG
-      for (int iii = 0; iii < lmer.size(); iii++) {
-	std::cout << "," << lmer[iii];
-      }
-      std::cout << std::endl;
-#endif
-      lmers.push_back(lmer);
+    if (lmer.size() >= (unsigned) mink) {
+        lmers.push_back(lmer);
     }
 
     // Current offset for the gap pattern in kbp
@@ -130,18 +121,12 @@ std::vector<std::vector<int> > extract_lmers(
         std::vector<int> lmerr;
         for (size_t jj = 0; jj < filtered_cuts.size()-1; jj++) {
             double frag = filtered_cuts[jj+1]-filtered_cuts[jj];
-            lmerr.push_back(quantize(frag));
+            lmerr.push_back((int) (frag / quantization));
         }
 
-	if (lmerr.size() >= mink) {
-#ifdef DEBUG
-	  for (int iii = 0; iii < lmerr.size(); iii++) {
-	    std::cout << "," << lmerr[iii];
-	  }
-	  std::cout << std::endl;
-#endif
-	  lmers.push_back(lmerr);
-	}
+        if (lmerr.size() >= (unsigned) mink) {
+            lmers.push_back(lmerr);
+        }
     }
 
     return lmers;

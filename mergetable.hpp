@@ -22,8 +22,6 @@
 
 #include "lmer_reader.hpp"
 
-//#define DEBUG
-
 class mphf_t {
 public:
     struct lmer_adaptor {
@@ -38,7 +36,6 @@ public:
     void load(std::istream &is);
 
     void swap(mphf_t& other) {
-        //std::swap(m_adaptor, other.m_adaptor);
         m_mphf.swap(other.m_mphf);
     }
 
@@ -91,7 +88,7 @@ public:
         size_t n = 0;
         is.read(reinterpret_cast<char*>(&n), sizeof(size_t));
 
-        m_index.resize(n); // = reinterpret_cast<uint64_t *>(calloc(n, sizeof(uint64_t)));
+        m_index.resize(n);
         is.read(reinterpret_cast<char*>(m_index.data()), (std::streamsize)(sizeof(m_index[0]) * n));
     }
 
@@ -141,7 +138,6 @@ mergetable_t::mergetable_t(const size_t n, const std::string &key_file, mphf_t m
     uint64_t *tree = (uint64_t *) calloc(sizeof(uint64_t), n);
     uint32_t *sizes = (uint32_t *) calloc(sizeof(uint32_t), n);
     
-    // memset(sizes, 1, n);
     for (size_t i = 0; i < n; i++) {
         tree[i] = ROOT;
         sizes[i] = 1;
@@ -149,14 +145,12 @@ mergetable_t::mergetable_t(const size_t n, const std::string &key_file, mphf_t m
 
     lmer_reader keys(key_file.c_str());
     std::vector<int> *u2lmer = new std::vector<int>[n];
-    //std::unordered_map<uint64_t, std::vector<int> > u2lmer;
     for (auto it = keys.begin(); it != keys.end(); ++it) {
-      std::vector<int> lmer = *it;
-      uint64_t u = mphf.lookup(lmer);
-      assert(u < n);
-      u2lmer[u] = lmer;
+        const std::vector<int> lmer = *it;
+        uint64_t u = mphf.lookup(lmer);
+        assert(u < n);
+        u2lmer[u] = lmer;
     }
-
 
     for (int round = 0; round < 2; round++) {
         for (auto it = keys.begin(); it != keys.end(); ++it) {
@@ -176,39 +170,27 @@ mergetable_t::mergetable_t(const size_t n, const std::string &key_file, mphf_t m
                     lmer[col]--;
                     uint64_t v = mphf.lookup(lmer);
 
-		    bool ok = true;
-		    if (v >= n)
-		      ok = false;
-		    else {
-		      std::vector<int> vlmer = u2lmer[v];
-		      if (lmer.size() != vlmer.size()) {
-			ok = false;
-		      } else {
-			for(int i = 0; i < lmer.size(); i++) {
-			  if (lmer[i] != vlmer[i]) {
-			    ok = false;
-			    break;
-			  }
-			}
-		      }
-#ifdef DEBUG
-		      if (!ok) {
-			std::cout << "False merge:" << u << " " << v << std::endl;
-			for(int i = 0; i < lmer.size(); i++) {
-			  std::cout << "," << lmer[i];
-			}
-			std::cout << std::endl;
-			for(int i = 0; i < vlmer.size(); i++) {
-			  std::cout << "," << vlmer[i];
-			}
-			std::cout << std::endl;
-		      }
-#endif
-		    }
-		    lmer[col]++;
+                    bool ok = true;
+                    if (v >= n)
+                        ok = false;
+                    else {
+                        const std::vector<int> vlmer = u2lmer[v];
+                        if (lmer.size() != vlmer.size()) {
+                            ok = false;
+                        } else {
+                            for (size_t i = 0; i < lmer.size(); i++) {
+                                if (lmer[i] != vlmer[i]) {
+                                    ok = false;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    lmer[col]++;
 
                     if (ok && v < n) {
-		        uint64_t root_v = v;
+                        uint64_t root_v = v;
                         while (tree[root_v] != ROOT)
                             root_v = tree[root_v];
                         
@@ -221,7 +203,7 @@ mergetable_t::mergetable_t(const size_t n, const std::string &key_file, mphf_t m
                         if (sizes[root_u] < sizes[root_v]) {
                             tree[root_u] = root_v;
                             sizes[root_v] += sizes[root_u];
-			    root_u = root_v;
+                            root_u = root_v;
                         } else {
                             tree[root_v] = root_u;
                             sizes[root_u] += sizes[root_v];
@@ -232,40 +214,27 @@ mergetable_t::mergetable_t(const size_t n, const std::string &key_file, mphf_t m
                 {
                     lmer[col]++;
                     uint64_t v = mphf.lookup(lmer);
-		    bool ok = true;
-		    if (v >= n)
-		      ok = false;
-		    else {
-		      std::vector<int> vlmer = u2lmer[v];
-		      if (lmer.size() != vlmer.size()) {
-			ok = false;
-		      } else {
-			for(int i = 0; i < lmer.size(); i++) {
-			  if (lmer[i] != vlmer[i]) {
-			    ok = false;
-			    break;
-			  }
-			}
-		      }
-#ifdef DEBUG
-		      if (!ok) {
-			std::cout << "False merge:" << u << " " << v << std::endl;
-			for(int i = 0; i < lmer.size(); i++) {
-			  std::cout << "," << lmer[i];
-			}
-			std::cout << std::endl;
-			for(int i = 0; i < vlmer.size(); i++) {
-			  std::cout << "," << vlmer[i];
-			}
-			std::cout << std::endl;
-		      }
-#endif
-		    }
+                    bool ok = true;
+                    if (v >= n)
+                        ok = false;
+                    else {
+                        std::vector<int> vlmer = u2lmer[v];
+                        if (lmer.size() != vlmer.size()) {
+                            ok = false;
+                        } else {
+                            for (size_t i = 0; i < lmer.size(); i++) {
+                                if (lmer[i] != vlmer[i]) {
+                                    ok = false;
+                                    break;
+                                }
+                            }
+                        }
+                    }
 
                     lmer[col]--;
 
                     if (ok && v < n) {
-		        uint64_t root_v = v;
+                        uint64_t root_v = v;
                         while (tree[root_v] != ROOT)
                             root_v = tree[root_v];
                         
@@ -278,7 +247,7 @@ mergetable_t::mergetable_t(const size_t n, const std::string &key_file, mphf_t m
                         if (sizes[root_u] < sizes[root_v]) {
                             tree[root_u] = root_v;
                             sizes[root_v] += sizes[root_u];
-			    root_u = root_v;
+                            root_u = root_v;
                         } else {
                             tree[root_v] = root_u;
                             sizes[root_u] += sizes[root_v];
@@ -301,8 +270,6 @@ mergetable_t::mergetable_t(const size_t n, const std::string &key_file, mphf_t m
         
         tree[i] = root;
     }
-    
-    std::cout << n << " " << m << std::endl;
 
     m_bv = new sdsl::bit_vector(n, 0);
     for (size_t i = 0; i < n; i++) {
@@ -314,8 +281,6 @@ mergetable_t::mergetable_t(const size_t n, const std::string &key_file, mphf_t m
     }
 
     m_rank = new sdsl::bit_vector::rank_1_type(m_bv);
-
-    // emphf::logger() << "Finished merging" << std::endl;
 
     delete [] u2lmer;
     free(tree);

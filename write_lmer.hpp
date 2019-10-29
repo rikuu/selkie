@@ -1,21 +1,16 @@
 #ifndef ELMERI_WRITE_LMER_HPP
 #define ELMERI_WRITE_LMER_HPP
 
-#include <string>
-
-#include "lmer_reader.hpp"
-#include "rmap.hpp"
-
-size_t multiwaymerge(const std::string &out, int n_parts);
-size_t write_lmers(const std::string in, const std::string out, int n_parts, int ell, int mink, const char* gap_pattern);
-
 #include <cstring>
 
-#include <vector>
 #include <string>
+#include <vector>
 #include <fstream>
 #include <algorithm>
 #include <iostream>
+
+#include "lmer_reader.hpp"
+#include "rmap.hpp"
 
 static bool cmp_lmer(const std::vector<int> &a, const std::vector<int> &b) {
     if (a.size() == 0) return false;
@@ -44,29 +39,27 @@ static bool eq_lmer(const std::vector<int> &a, const std::vector<int> &b) {
     return true;
 }
 
-size_t write_lmers(const std::string in, const std::string out, int n_parts, int ell, int mink, const char* gap_pattern) {
+size_t write_lmers(const std::string in, const std::string out,
+        const int n_parts, const int ell, const int mink, const double quantization,
+        const char* gap_pattern) {
     std::vector<std::vector<double> > forward, reverse;
     size_t rmap_count = read_rmaps(in.c_str(), 0, &forward, &reverse);
     
     size_t all_n = 0;
     size_t rp = rmap_count / n_parts;
-    
-    std::cout << rmap_count << std::endl;
-    std::cout << n_parts << " " << rp * n_parts << std::endl;
-
     for (int p = 0; p < n_parts; p++) {
         const std::string part_out = out + ((n_parts != 1) ? "." + std::to_string(p) : "");
 
         std::vector<std::vector<int> > keys;
         for (size_t i = p * rp; i < std::min((p+1) * rp, rmap_count); i++) {
-            std::vector<std::vector<int> > lmers_f = extract_lmers(forward[i], ell, mink, gap_pattern);
+            std::vector<std::vector<int> > lmers_f = extract_lmers(forward[i], ell, mink, quantization, gap_pattern);
         
             for (auto it = lmers_f.begin(); it != lmers_f.end(); ++it) {
                 std::vector<int> key = *it;
                 keys.push_back(key);
             }
 
-            std::vector<std::vector<int> > lmers_r = extract_lmers(reverse[i], ell, mink, gap_pattern);
+            std::vector<std::vector<int> > lmers_r = extract_lmers(reverse[i], ell, mink, quantization, gap_pattern);
         
             for (auto it = lmers_r.begin(); it != lmers_r.end(); ++it) {
                 std::vector<int> key = *it;
@@ -110,7 +103,7 @@ size_t write_lmers(const std::string in, const std::string out, int n_parts, int
     return all_n;
 }
 
-size_t multiwaymerge(const std::string &out, int n_parts) {
+size_t multiwaymerge(const std::string &out, const int n_parts) {
     size_t n = 0;
     
     std::vector<FILE*> files;
@@ -147,13 +140,6 @@ size_t multiwaymerge(const std::string &out, int n_parts) {
 
         if (eq_lmer(min_lmer, prev))
             continue;
-
-#ifdef DEBUG
-	for (size_t i = 0; i < min_lmer.size(); i++) {
-	  std::cout << "," << min_lmer[i];
-	}
-	std::cout << std::endl;
-#endif
 
         prev = min_lmer;
 

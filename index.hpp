@@ -15,13 +15,27 @@ public:
     int related_id, current_pos, related_pos;
 };
 
+static bool sort_related(const related &r1, const related &r2) {
+    if (r1.related_id != r2.related_id)
+        return r1.related_id < r2.related_id;
+    else
+        return r1.current_pos < r2.current_pos;
+}
+
+struct sort_pairs {
+    bool operator()(const std::pair<related, int> &left, const std::pair<related, int> &right) {
+        return left.second > right.second;
+    }
+};
+
 class index_t {
 public:
     index_t() {}
-    index_t(const std::string &in, int ell, int mink, char *gap_pattern, int n_parts) {
+    index_t(const std::string &in, int ell, int mink, double quantization, char *gap_pattern, int n_parts) {
         m_ell = ell;
         m_mink = mink;
         m_gap_pattern = gap_pattern;
+        m_quantization = quantization;
 
         m_max_list_length = 0;
         m_sum_of_lengths = 0;
@@ -30,7 +44,7 @@ public:
         const std::string key_file = "tmp.xxx";
 
         emphf::logger() << "Writing " << n_parts << " parts" << std::endl;
-        m_n = write_lmers(in, key_file, n_parts, ell, mink, gap_pattern);
+        m_n = write_lmers(in, key_file, n_parts, ell, mink, quantization, gap_pattern);
 
         if (n_parts != 1) {
             emphf::logger() << "Merging parts" << std::endl;
@@ -123,22 +137,10 @@ private:
 
     int m_ell, m_mink;
     size_t m_n, m_m;
+    double m_quantization;
     char* m_gap_pattern;
 
     size_t m_sum_of_lengths, m_sum_of_sizes, m_max_list_length;
-};
-
-static bool sort_related(const related &r1, const related &r2) {
-    if (r1.related_id != r2.related_id)
-        return r1.related_id < r2.related_id;
-    else
-        return r1.current_pos < r2.current_pos;
-}
-
-struct sort_pairs {
-    bool operator()(const std::pair<related, int> &left, const std::pair<related, int> &right) {
-        return left.second > right.second;
-    }
 };
 
 uint8_t *index_t::get_values(const std::vector<int> q, size_t *out_size) {
@@ -163,7 +165,7 @@ uint8_t *index_t::get_values(const std::vector<int> q, size_t *out_size) {
 }
 
 size_t index_t::get_related(const std::vector<double> rmap, std::vector<std::pair<related, unsigned int> > *counts) {
-    std::vector<std::vector<int> > lmers = extract_lmers(rmap, m_ell, m_mink, m_gap_pattern);
+    std::vector<std::vector<int> > lmers = extract_lmers(rmap, m_ell, m_mink, m_quantization, m_gap_pattern);
 
     int exclude_id = counts->size() > 0 ? (*counts)[0].first.related_id : -1;
 
@@ -241,7 +243,7 @@ std::vector<std::vector<uint32_t> > index_t::gather_lists(const std::string &in,
     std::vector<std::vector<double> > forward, reverse;
     size_t rmap_count = read_rmaps(in.c_str(), 0, &forward, &reverse);
     for (size_t i = 0; i < rmap_count; i++) {
-        std::vector<std::vector<int> > lmers_f = extract_lmers(forward[i], m_ell, m_mink, m_gap_pattern);
+        std::vector<std::vector<int> > lmers_f = extract_lmers(forward[i], m_ell, m_mink, m_quantization, m_gap_pattern);
 
         for (auto it = lmers_f.begin(); it != lmers_f.end(); ++it) {
             const std::vector<int> key = *it;
@@ -260,7 +262,7 @@ std::vector<std::vector<uint32_t> > index_t::gather_lists(const std::string &in,
             lists[v - start].push_back((uint32_t) i*2);
         }
 
-        std::vector<std::vector<int> > lmers_r = extract_lmers(reverse[i], m_ell, m_mink, m_gap_pattern);
+        std::vector<std::vector<int> > lmers_r = extract_lmers(reverse[i], m_ell, m_mink, m_quantization, m_gap_pattern);
     
         for (auto it = lmers_r.begin(); it != lmers_r.end(); ++it) {
             const std::vector<int> key = *it;
@@ -329,6 +331,7 @@ void index_t::save(std::ostream& os) const {
 
     os.write(reinterpret_cast<char const*>(&m_ell), sizeof(int));
     os.write(reinterpret_cast<char const*>(&m_mink), sizeof(int));
+    os.write(reinterpret_cast<char const*>(&m_quantization), sizeof(double));
 
     const size_t pattern_length = strlen(m_gap_pattern);
     os.write(reinterpret_cast<char const*>(&pattern_length), sizeof(size_t));
@@ -367,6 +370,7 @@ void index_t::load(std::istream& is) {
 
     is.read(reinterpret_cast<char*>(&m_ell), sizeof(int));
     is.read(reinterpret_cast<char*>(&m_mink), sizeof(int));
+    is.read(reinterpret_cast<char*>(&m_quantization), sizeof(double));
 
     size_t len_pattern = 0;
     is.read(reinterpret_cast<char*>(&len_pattern), sizeof(size_t));
