@@ -1,6 +1,8 @@
 #ifndef ELMERI_INDEX_HPP
 #define ELMERI_INDEX_HPP
 
+#include "streamvbyte.h"
+
 #include <vector>
 #include <fstream>
 #include <algorithm>
@@ -21,61 +23,99 @@ public:
         m_mink = mink;
         m_gap_pattern = gap_pattern;
 
+        m_max_list_length = 0;
+        m_sum_of_lengths = 0;
+        m_sum_of_sizes = 0;
+        
         const std::string key_file = "tmp.xxx";
-        {
-            emphf::logger() << "Writing " << n_parts << " parts" << std::endl;
-            m_n = write_lmers(in, key_file, n_parts, ell, mink, gap_pattern);
 
-            if (n_parts != 1) {
-                emphf::logger() << "Merging parts" << std::endl;
-                size_t cn = multiwaymerge(key_file, n_parts);
-                std::cout << m_n << " " << cn << std::endl;
-                m_n = cn;
+        emphf::logger() << "Writing " << n_parts << " parts" << std::endl;
+        m_n = write_lmers(in, key_file, n_parts, ell, mink, gap_pattern);
+
+        if (n_parts != 1) {
+            emphf::logger() << "Merging parts" << std::endl;
+            m_n = multiwaymerge(key_file, n_parts);
+        }
+
+        emphf::logger() << "Constructing MPHF" << std::endl;
+        mphf_t(key_file).swap(m_mphf);
+
+        emphf::logger() << "Constructing mergetable" << std::endl;
+        m_merge = mergetable_t(m_n, key_file, m_mphf);
+
+        m_max_list_length = 8;
+        size_t bytes_alloc = 3*m_n/2;
+        size_t lengths_alloc = bytes_alloc;
+        
+        uint32_t *delta_buffer = reinterpret_cast<uint32_t *>(calloc(m_max_list_length, sizeof(uint32_t)));
+        m_lists = reinterpret_cast<uint8_t *>(calloc(bytes_alloc, sizeof(uint8_t)));
+
+        m_lengths = sdsl::bit_vector(bytes_alloc, 0);
+        m_sizes = sdsl::bit_vector(bytes_alloc, 0);
+
+        m_lengths[0] = 1;
+        m_sizes[0] = 1;
+
+        const size_t step = m_n / n_parts;
+
+        size_t max_bytes = 0;
+        emphf::logger() << "Gathering lists" << std::endl;
+        for (size_t i = 0; i < m_n-step; i += step) {
+            std::vector<std::vector<uint32_t> > lists = gather_lists(in, i, i+step);
+
+            size_t length = 0;
+            bool max_list_changed = false;
+            for (size_t i = 0; i < lists.size(); i++) {
+                if (lists[i].size() > m_max_list_length) {
+                    m_max_list_length = lists[i].size();
+                    max_list_changed = true;
+                }
+                
+                max_bytes += streamvbyte_max_compressedbytes(lists[i].size());
+                length += lists[i].size();
             }
+
+            if (max_list_changed)
+                delta_buffer = (uint32_t*) realloc(delta_buffer, m_max_list_length * sizeof(uint32_t));
+            
+            if (max_bytes >= bytes_alloc) {
+                // TODO: prealloc more than required
+                bytes_alloc = max_bytes;
+                m_lists = (uint8_t*) realloc(m_lists, bytes_alloc * sizeof(uint8_t));
+                m_sizes.resize(bytes_alloc);
+            }
+            
+            if (m_sum_of_lengths + length >= lengths_alloc) {
+                // TODO: for sure prealloc more
+                lengths_alloc = m_sum_of_lengths + length;
+                m_lengths.resize(lengths_alloc);
+            }
+
+            compress_lists(lists, delta_buffer);
         }
 
-        {
-            emphf::logger() << "Constructing MPHF" << std::endl;
-            mphf_t(key_file).swap(m_mphf);
+        free(delta_buffer);
 
-            emphf::logger() << "Constructing mergetable" << std::endl;
-	    m_merge = mergetable_t(m_n, key_file, m_mphf);
-	    //m_merge = mergetable_t(m_n);
-        }
+        m_lengths.resize(m_sum_of_lengths+2);
+        m_sizes.resize(m_sum_of_sizes+2);
 
-        {
-            // TODO: Compress partial lists of lists
-            emphf::logger() << "Gathering lists" << std::endl;
-            std::vector<std::vector<uint32_t> > lists = gather_lists(in);
-
-#ifdef DEBUG
-	    for(int i = 0; i < lists.size(); i++) {
-	      for(int j = 0; j < lists[i].size(); j++) {
-		std::cout << "," << lists[i][j];
-	      }
-	      std::cout << std::endl;
-	    }
-#endif
-
-            emphf::logger() << "Compressing lists" << std::endl;
-            compress_lists(lists);
-
-	}
+        m_lengths_select = new sdsl::bit_vector::select_1_type(&m_lengths);
+        m_sizes_select = new sdsl::bit_vector::select_1_type(&m_sizes);
     }
 
     void save(std::ostream &os) const;
     void load(std::istream &is);
 
-    uint8_t *get_values(const std::vector<int> q, size_t *out_size, size_t *in_size);
+    uint8_t *get_values(const std::vector<int> q, size_t *out_size);
 
     size_t get_related(const std::vector<double> rmap, std::vector<std::pair<related, unsigned int> > *counts);
 
-    std::vector<std::vector<uint32_t> > gather_lists(const std::string &in);
-    void compress_lists(std::vector<std::vector<uint32_t> > lists);
+    std::vector<std::vector<uint32_t> > gather_lists(const std::string &in, size_t start, size_t end);
+    void compress_lists(std::vector<std::vector<uint32_t> > lists, uint32_t *delta_buffer);
 
-//private:
+private:
     sdsl::bit_vector m_lengths, m_sizes;
-    sdsl::bit_vector::select_1_type m_lengths_select, m_sizes_select;
+    sdsl::bit_vector::select_1_type *m_lengths_select, *m_sizes_select;
 
     uint8_t *m_lists;
     mphf_t m_mphf;
@@ -87,8 +127,6 @@ public:
 
     size_t m_sum_of_lengths, m_sum_of_sizes, m_max_list_length;
 };
-
-#include "streamvbyte.h"
 
 static bool sort_related(const related &r1, const related &r2) {
     if (r1.related_id != r2.related_id)
@@ -103,27 +141,24 @@ struct sort_pairs {
     }
 };
 
-uint8_t *index_t::get_values(const std::vector<int> q, size_t *out_size, size_t *in_size) {
+uint8_t *index_t::get_values(const std::vector<int> q, size_t *out_size) {
     const uint64_t u = m_mphf.lookup(q);
 
-    uint64_t s, s1, l, l1;
+    uint64_t s, l, l1;
     if (!m_merge.merged(u)) {
         uint64_t r = m_merge.rank(u);
-        l = m_lengths_select.select(u+1 - r);
-        l1 = m_lengths_select.select(u+2 - r);
-        s = m_sizes_select.select(u+1 - r);
-        s1 = m_sizes_select.select(u+2 - r);
+        l = m_lengths_select->select(u+1 - r);
+        l1 = m_lengths_select->select(u+2 - r);
+        s = m_sizes_select->select(u+1 - r);
     } else {
         uint32_t v = m_merge.end(u);
         uint64_t r = m_merge.rank(v);
-        l = m_lengths_select.select(v+1 - r);
-        l1 = m_lengths_select.select(v+2 - r);
-        s = m_sizes_select.select(v+1 - r);
-        s1 = m_sizes_select.select(v+2 - r);
+        l = m_lengths_select->select(v+1 - r);
+        l1 = m_lengths_select->select(v+2 - r);
+        s = m_sizes_select->select(v+1 - r);
     }
 
     *out_size = l1 - l;
-    *in_size = s1 - s;
     return m_lists + s;
 }
 
@@ -138,12 +173,16 @@ size_t index_t::get_related(const std::vector<double> rmap, std::vector<std::pai
     std::vector<related> friends;
     std::set<uint64_t> used_lmers;
     for (auto it = lmers.begin(); it != lmers.end(); ++it) {
-      uint64_t u = m_mphf.lookup(*it);
-      if (used_lmers.find(u) == used_lmers.end()) {
-	size_t out_size = 0, in_size = 0;
-	uint8_t *v = get_values(*it, &out_size, &in_size);
-	streamvbyte_decode(v, delta_buffer, out_size);
-        
+        uint64_t u = m_mphf.lookup(*it);
+        if (used_lmers.find(u) != used_lmers.end())
+            continue;
+
+        used_lmers.insert(u);
+
+        size_t out_size = 0;
+        uint8_t *v = get_values(*it, &out_size);
+        streamvbyte_decode(v, delta_buffer, out_size);
+    
         for (size_t i = 1; i < out_size; i++) {
             delta_buffer[i] = delta_buffer[i-1] + delta_buffer[i];
         }
@@ -155,8 +194,6 @@ size_t index_t::get_related(const std::vector<double> rmap, std::vector<std::pai
             r.related_pos = 0;
             friends.push_back(r);
         }
-      }
-      used_lmers.insert(u);
     }
 
     free(delta_buffer);
@@ -198,8 +235,8 @@ size_t index_t::get_related(const std::vector<double> rmap, std::vector<std::pai
     return counts->size();
 }
 
-std::vector<std::vector<uint32_t> > index_t::gather_lists(const std::string &in) {
-    std::vector<std::vector<uint32_t> > lists(m_n+1);
+std::vector<std::vector<uint32_t> > index_t::gather_lists(const std::string &in, size_t start, size_t end) {
+    std::vector<std::vector<uint32_t> > lists(end - start + 1);
 
     std::vector<std::vector<double> > forward, reverse;
     size_t rmap_count = read_rmaps(in.c_str(), 0, &forward, &reverse);
@@ -208,62 +245,45 @@ std::vector<std::vector<uint32_t> > index_t::gather_lists(const std::string &in)
 
         for (auto it = lmers_f.begin(); it != lmers_f.end(); ++it) {
             const std::vector<int> key = *it;
-            uint64_t u = m_mphf.lookup(key);
-            if (u >= m_merge.size()) //m_n)
+            const uint64_t u = m_mphf.lookup(key);
+            if (u >= m_n)
                 continue;
 
-            if (m_merge.merged(u)) {
-	      if (lists[m_merge.end(u)+1].size() == 0 || lists[m_merge.end(u)+1].back() != (uint32_t) i*2)
-                lists[m_merge.end(u)+1].push_back((uint32_t) i*2);
-            } else {
-	      if (lists[u+1].size() == 0 || lists[u+1].back() != (uint32_t) i*2)
-                lists[u+1].push_back((uint32_t) i*2);
-	    }
+            const uint64_t v = m_merge.merged(u) ? m_merge.end(u) : u;
+            
+            if (v < start || v > end)
+                continue;
+
+            if (lists[v - start].size() != 0 && lists[v-start].back() == (uint32_t) i*2)
+                continue;
+
+            lists[v - start].push_back((uint32_t) i*2);
         }
 
         std::vector<std::vector<int> > lmers_r = extract_lmers(reverse[i], m_ell, m_mink, m_gap_pattern);
     
         for (auto it = lmers_r.begin(); it != lmers_r.end(); ++it) {
             const std::vector<int> key = *it;
-            uint64_t u = m_mphf.lookup(key);
-            if (u >= m_merge.size()) //m_n)
+            const uint64_t u = m_mphf.lookup(key);
+            if (u >= m_n)
                 continue;
 
-            if (m_merge.merged(u)) {
-	      if (lists[m_merge.end(u)+1].size() == 0 || lists[m_merge.end(u)+1].back() != (uint32_t) (i*2) + 1)
-                lists[m_merge.end(u)+1].push_back((uint32_t) (i*2) + 1);
-            } else {
-	      if (lists[u+1].size() == 0 || lists[u+1].back() != (uint32_t) (i*2) + 1)
-                lists[u+1].push_back((uint32_t) (i*2) + 1);
-	    }
+            const uint64_t v = m_merge.merged(u) ? m_merge.end(u) : u;
+
+            if (v < start || v > end)
+                continue;
+
+            if (lists[v - start].size() != 0 && lists[v-start].back() == (uint32_t) (i*2)+1)
+                continue;
+
+            lists[v - start].push_back((uint32_t) (i*2)+1);
         }
     }
 
     return lists;
 }
 
-void index_t::compress_lists(std::vector<std::vector<uint32_t> > lists) {
-    size_t cume_length = 0, cume_size = 0;
-    size_t max_bytes = 0;
-    m_max_list_length = 0;
-    for (size_t i = 0; i < lists.size(); i++) {
-        m_max_list_length = (lists[i].size() > m_max_list_length) ? lists[i].size() : m_max_list_length;
-        max_bytes += streamvbyte_max_compressedbytes(lists[i].size());
-        
-        cume_length += lists[i].size();
-    }
-
-    uint32_t *delta_buffer = reinterpret_cast<uint32_t *>(calloc(m_max_list_length, sizeof(uint32_t)));
-
-    m_lists = reinterpret_cast<uint8_t *>(calloc(max_bytes, sizeof(uint8_t)));
-    
-    m_lengths = sdsl::bit_vector(cume_length+2, 0);
-    m_sizes = sdsl::bit_vector(max_bytes+2, 0);
-
-    m_lengths[0] = 1;
-    m_sizes[0] = 1;
-    
-    cume_length = 0;
+void index_t::compress_lists(std::vector<std::vector<uint32_t> > lists, uint32_t *delta_buffer) {
     for (size_t i = 0; i < lists.size(); i++) {
         if (lists[i].size() == 0)
             continue;
@@ -284,31 +304,14 @@ void index_t::compress_lists(std::vector<std::vector<uint32_t> > lists) {
             prev = lists[i][j];
         }
         
-        size_t size = streamvbyte_encode(delta_buffer, lists[i].size() - skipped, m_lists + cume_size);
+        size_t size = streamvbyte_encode(delta_buffer, lists[i].size() - skipped, m_lists + m_sum_of_sizes);
 
-        cume_length += lists[i].size() - skipped;
-        cume_size += size;
+        m_sum_of_lengths += lists[i].size() - skipped;
+        m_sum_of_sizes += size;
 
-        m_lengths[cume_length] = 1;
-        m_sizes[cume_size] = 1;
+        m_lengths[m_sum_of_lengths] = 1;
+        m_sizes[m_sum_of_sizes] = 1;
     }
-
-    m_lengths.resize(cume_length+2);
-    m_sizes.resize(cume_size+2);
-
-    std::cerr << cume_length << " " << cume_size << std::endl;
-
-    m_sum_of_lengths = cume_length + 1;
-    m_sum_of_sizes = cume_size + 1;
-
-    size_t rank = 0;
-    for (size_t i = 0; i < cume_length+1; i++) {
-        if (m_lengths[i] == 1)
-            rank++;
-    }
-    std::cerr << lists.size() << " " << rank << std::endl;
-
-    free(delta_buffer);
 }
 
 void index_t::save(std::ostream& os) const {
@@ -371,10 +374,10 @@ void index_t::load(std::istream& is) {
     is.read(reinterpret_cast<char*>(m_gap_pattern), len_pattern);
 
     m_lengths.load(is);
-    m_lengths_select = sdsl::bit_vector::select_1_type(&m_lengths);
+    m_lengths_select = new sdsl::bit_vector::select_1_type(&m_lengths);
 
     m_sizes.load(is);
-    m_sizes_select = sdsl::bit_vector::select_1_type(&m_sizes);
+    m_sizes_select = new sdsl::bit_vector::select_1_type(&m_sizes);
 
     m_lists = reinterpret_cast<uint8_t *>(calloc(m_sum_of_sizes, sizeof(uint8_t)));
     is.read(reinterpret_cast<char*>(m_lists), (std::streamsize)(sizeof(m_lists[0]) * m_sum_of_sizes));

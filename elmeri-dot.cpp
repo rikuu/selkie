@@ -8,16 +8,14 @@
 #include "index.hpp"
 
 int main(int argc, char *argv[]) {
-    if (argc != 3) {
+    if (argc != 4) {
         std::cout << "Invalid arguments." << std::endl;
         return 1;
     }
 
-    int count_thrs = 2;
-
-    // Command line arguments
     char *in_filename = argv[1];
     char *index_filename = argv[2];
+    int count_thrs = atoi(argv[3]);
     
     std::ifstream is(std::string(index_filename), std::ios::binary);
     index_t index;
