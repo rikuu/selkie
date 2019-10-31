@@ -26,9 +26,8 @@ size_t read_rmaps(const char *filename, std::vector<std::string> *names,
         // 2 = empty line
 
         // Add the name of the Rmap
-        if (i == 0) {
-            if (names)
-                names->push_back(line);
+        if (i == 0 && names != NULL) {
+            names->push_back(line);
         }
 
         // Read the fragment lengths
@@ -55,7 +54,7 @@ size_t read_rmaps(const char *filename, std::vector<std::string> *names,
             }*/
 
             // Turn the fragment lengths into a sequence of cut sites
-            if (forward) {
+            if (forward != NULL) {
                 std::vector<double> cuts;
                 double s = 0.0;
                 cuts.push_back(s);
@@ -69,7 +68,7 @@ size_t read_rmaps(const char *filename, std::vector<std::string> *names,
             }
             
             // Figure out the cut sites for the reverse Rmap
-            if (reverse) {
+            if (reverse != NULL) {
                 std::vector<double> cuts;
                 double s = 0.0;
                 cuts.push_back(s);

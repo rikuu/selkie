@@ -40,12 +40,12 @@ int main(int argc, char *argv[]) {
         int degree = 0;
 
         for (size_t k = 0; k < counts_size; k++) {
-            if (counts[k].second < count_thrs)
+            if (counts[k].second < (unsigned) count_thrs)
                 continue;
 
             degree++;
             // Only print each edge once, i.e. when the current Rmap has a smaller index than the related one
-            if (counts[k].first.related_id/2 > i) {
+            if ((unsigned) counts[k].first.related_id/2 > i) {
                 // <current Rmap> -- <related Rmap> [weight=<number of shared mers>]
                 std::cout << i << " -- " << counts[k].first.related_id/2 << " [weight=" << counts[k].second << "];\n";
                 edges++;
