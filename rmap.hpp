@@ -1,5 +1,5 @@
-#ifndef ELMERI_RMAP_HPP
-#define ELMERI_RMAP_HPP
+#ifndef SELKIE_RMAP_HPP
+#define SELKIE_RMAP_HPP
 
 #include <vector>
 #include <string>

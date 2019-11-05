@@ -1,25 +1,25 @@
 DIRS = -I/usr/local/include/ -L/usr/local/lib/ -Ithirdparty/emphf/ -Ithirdparty/streamvbyte/include/ -Lsdsl-inst/lib -Isdsl-inst/include
 CFLAGS = $(DIRS) -O3 -march=native -g --std=c++11 -Wall -Wextra -Wno-implicit-fallthrough -Wno-ignored-qualifiers
-LDFLAGS = $(DIRS) -lsdsl
+LDFLAGS = $(DIRS) -lsdsl thirdparty/streamvbyte/streamvbyte_encode.o thirdparty/streamvbyte/streamvbyte_decode.o
 CC = g++-9
 
-CFILES = rmap.cpp lmer_reader.cpp # write_lmer.cpp mergetable.cpp index.cpp
+CFILES = rmap.cpp lmer_reader.cpp
 HFILES = rmap.hpp lmer_reader.hpp write_lmer.hpp mergetable.hpp index.hpp
 EXTRA = Makefile README.md COPYING
-VERSION = 0.1
+VERSION = 1.0
 
 OBJS = $(CFILES:.cpp=.o)
 
-all: build-index elmeri-dot candidates
+all: selkie-index selkie-dot selkie-candidates
 
-build-index: $(OBJS) build-index.o
-	$(CC) $(LDFLAGS) -o $@ $^ thirdparty/streamvbyte/streamvbyte_encode.o thirdparty/streamvbyte/streamvbyte_decode.o
+selkie-index: $(OBJS) build-index.o
+	$(CC) $(LDFLAGS) -o $@ $^
 
-candidates: $(OBJS) candidates.o
-	$(CC) $(LDFLAGS) -o $@ $^ thirdparty/streamvbyte/streamvbyte_encode.o thirdparty/streamvbyte/streamvbyte_decode.o
+selkie-candidates: $(OBJS) candidates.o
+	$(CC) $(LDFLAGS) -o $@ $^
 
-elmeri-dot: $(OBJS) elmeri-dot.o
-	$(CC) $(LDFLAGS) -o $@ $^ thirdparty/streamvbyte/streamvbyte_encode.o thirdparty/streamvbyte/streamvbyte_decode.o
+selkie-dot: $(OBJS) dot.o
+	$(CC) $(LDFLAGS) -o $@ $^
 
 %.o: %.cpp $(HFILES)
 	$(CC) $(CFLAGS) -c $<

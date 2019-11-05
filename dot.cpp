@@ -57,16 +57,11 @@ int main(int argc, char *argv[]) {
         }
     }
 
-
-    std::cout << "}";
-    std::cout << std::endl;
+    std::cout << "}" << std::endl;
 
     // Some statistics of the related Rmaps
     fprintf(stderr, "Nodes: %d\n", nodes);  // Number of Rmaps
     fprintf(stderr, "Edges: %d\n", edges);  // Number of related Rmaps pairs
     fprintf(stderr, "Singleton nodes: %d\n", singletons);  // Number of Rmaps with no related Rmaps
-
-    // fprintf(stderr, "lmers: %d\n", index.n);
-
     return 0;
 }

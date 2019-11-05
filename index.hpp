@@ -1,5 +1,5 @@
-#ifndef ELMERI_INDEX_HPP
-#define ELMERI_INDEX_HPP
+#ifndef SELKIE_INDEX_HPP
+#define SELKIE_INDEX_HPP
 
 #include "streamvbyte.h"
 

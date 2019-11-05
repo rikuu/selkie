@@ -9,14 +9,14 @@
 #include "rmap.hpp"
 
 int main(int argc, char *argv[]) {
-    if (argc != 4) {
-        std::cout << "Invalid arguments." << std::endl;
+    if (argc < 3 || argc > 4) {
+        std::cout << "Usage: selkie-candidates <map> <index> [threshold]" << std::endl;
         return 1;
     }
 
     std::string in_filename = argv[1];
     std::string index_filename = argv[2];
-    unsigned int count_thrs = atoi(argv[3]);
+    unsigned int count_thrs = (argc == 4) ? atoi(argv[3]) : 2;
     
     std::ifstream is(index_filename, std::ios::binary);
     index_t index;

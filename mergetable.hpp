@@ -1,5 +1,5 @@
-#ifndef ELMERI_MERGETABLE_HPP
-#define ELMERI_MERGETABLE_HPP
+#ifndef SELKIE_MERGETABLE_HPP
+#define SELKIE_MERGETABLE_HPP
 
 #include <cstring>
 

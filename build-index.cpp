@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
     }
 
     if (argc == optind) {
-        fprintf(stderr, "Usage: build-index [options] <input>\n");
+        fprintf(stderr, "Usage: selkie-index [options] <input>\n");
         fprintf(stderr, "-o FILE     output file [stdout]\n");
         fprintf(stderr, "-l INT      ell [%d]\n", ell);
         fprintf(stderr, "-k INT      k [%d]\n", mink);

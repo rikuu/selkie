@@ -1,5 +1,5 @@
-#ifndef ELMERI_WRITE_LMER_HPP
-#define ELMERI_WRITE_LMER_HPP
+#ifndef SELKIE_WRITE_LMER_HPP
+#define SELKIE_WRITE_LMER_HPP
 
 #include <cstring>
 
