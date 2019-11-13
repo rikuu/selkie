@@ -4,3 +4,6 @@
 [submodule "thirdparty/streamvbyte"]
 	path = thirdparty/streamvbyte
 	url = https://github.com/lemire/streamvbyte
+[submodule "thirdparty/valouev"]
+	path = thirdparty/valouev
+	url = https://github.com/LeenaSalmela/valouev_optmap_alignment

@@ -1,7 +1,7 @@
 DIRS = -I/usr/local/include/ -L/usr/local/lib/ -Ithirdparty/emphf/ -Ithirdparty/streamvbyte/include/ -Lsdsl-inst/lib -Isdsl-inst/include
 CFLAGS = $(DIRS) -O3 -march=native -g --std=c++11 -Wall -Wextra -Wno-implicit-fallthrough -Wno-ignored-qualifiers
 LDFLAGS = $(DIRS) -lsdsl thirdparty/streamvbyte/streamvbyte_encode.o thirdparty/streamvbyte/streamvbyte_decode.o
-CC = g++-9
+CC = g++
 
 CFILES = rmap.cpp lmer_reader.cpp
 HFILES = rmap.hpp lmer_reader.hpp write_lmer.hpp mergetable.hpp index.hpp
