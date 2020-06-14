@@ -1,7 +1,9 @@
-DIRS = -I/usr/local/include/ -L/usr/local/lib/ -Ithirdparty/emphf/ -Ithirdparty/streamvbyte/include/ -Lsdsl-inst/lib -Isdsl-inst/include
-CFLAGS = $(DIRS) -O3 -march=native -g --std=c++11 -Wall -Wextra -Wno-implicit-fallthrough -Wno-ignored-qualifiers
-LDFLAGS = $(DIRS) -lsdsl thirdparty/streamvbyte/streamvbyte_encode.o thirdparty/streamvbyte/streamvbyte_decode.o
-CC = g++
+INCDIRS = -I/usr/local/include/ -Ithirdparty/emphf/ -Ithirdparty/streamvbyte/include/ -Isdsl-inst/include
+LINKDIRS = -L/usr/local/lib/ -Lsdsl-inst/lib
+OPT = -O3 -march=native -msse4.2
+CFLAGS = $(INCDIRS) -g --std=c++11 -Wall -Wextra -Wno-implicit-fallthrough -Wno-ignored-qualifiers $(OPT)
+LDFLAGS = $(LINKDIRS) -lsdsl thirdparty/streamvbyte/streamvbyte_encode.o thirdparty/streamvbyte/streamvbyte_decode.o
+CXX = g++
 
 CFILES = rmap.cpp lmer_reader.cpp
 HFILES = rmap.hpp lmer_reader.hpp write_lmer.hpp mergetable.hpp index.hpp
@@ -13,16 +15,16 @@ OBJS = $(CFILES:.cpp=.o)
 all: selkie-index selkie-dot selkie-candidates
 
 selkie-index: $(OBJS) build-index.o
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CXX) $(LDFLAGS) -o $@ $^
 
 selkie-candidates: $(OBJS) candidates.o
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CXX) $(LDFLAGS) -o $@ $^
 
 selkie-dot: $(OBJS) dot.o
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CXX) $(LDFLAGS) -o $@ $^
 
 %.o: %.cpp $(HFILES)
-	$(CC) $(CFLAGS) -c $<
+	$(CXX) $(CFLAGS) -c $<
 
 clean:
 	rm $(OBJS)
