@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
     char *gap_pattern = (char *) "11111111110001110110010010011101001110001010010100001010011000010111100000001100";
 
     int c;
-    while ((c = getopt(argc, argv, "o:l:s:p:q:v")) >= 0) {
+    while ((c = getopt(argc, argv, "o:l:s:p:q:v:k:")) >= 0) {
         if (c == 'o') outfile = optarg;
         else if (c == 'l') ell = atoi(optarg);
         else if (c == 'k') mink = atoi(optarg);
