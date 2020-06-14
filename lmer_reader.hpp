@@ -17,7 +17,7 @@ class lmer_iterator
     : public std::iterator<std::forward_iterator_tag, const std::vector<int> > {
 
 public:
-    lmer_iterator() : m_is(nullptr), m_pos(0) {    
+    lmer_iterator() : m_is(nullptr), m_pos(0), m_n(0), m_m(0) {
     }
 
     lmer_iterator(FILE *is) {
@@ -44,12 +44,12 @@ public:
     }
 
     friend bool operator==(lmer_iterator const& lhs, lmer_iterator const& rhs) {
-        if (!lhs.m_is || !rhs.m_is) {
-            if (!lhs.m_is && !rhs.m_is) {
+        if (lhs.m_is == nullptr || rhs.m_is == nullptr) {
+            if (lhs.m_is == nullptr && rhs.m_is == nullptr) {
                 return true;
-            } else {
-                return false;
             }
+
+            return false;
         }
 
         assert(lhs.m_is == rhs.m_is);
@@ -92,7 +92,7 @@ public:
     lmer_reader(const std::string &filename) {
         m_is = fopen(filename.c_str(), "rb");
 
-        if (!m_is) {
+        if (m_is == nullptr) {
             throw std::invalid_argument("Error opening " + filename);
         }
 

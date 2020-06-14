@@ -39,7 +39,7 @@ static bool eq_lmer(const std::vector<int> &a, const std::vector<int> &b) {
     return true;
 }
 
-size_t write_lmers(const std::string in, const std::string out,
+size_t write_lmers(const std::string &in, const std::string &out,
         const int n_parts, const int ell, const int mink, const double quantization,
         const char* gap_pattern) {
     std::vector<std::vector<double> > forward, reverse;

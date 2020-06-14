@@ -48,7 +48,7 @@ class mergetable_t {
 public:
     mergetable_t() {}
     
-    mergetable_t(const size_t n) {
+    explicit mergetable_t(const size_t n) {
         m_bv = new sdsl::bit_vector(n, 0);
         m_rank = new sdsl::bit_vector::rank_1_type(m_bv);
         m_index = std::vector<uint64_t>();

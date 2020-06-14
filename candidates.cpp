@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
 
     std::vector<std::string> names;
     std::vector<std::vector<double> > forward;
-    read_rmaps(in_filename.c_str(), &names, &forward, NULL);
+    read_rmaps(in_filename.c_str(), &names, &forward, nullptr);
 
     for (size_t i = 0; i < forward.size(); i++) {
         std::vector<std::pair<related, unsigned int> > counts;

@@ -18,8 +18,7 @@ public:
 static bool sort_related(const related &r1, const related &r2) {
     if (r1.related_id != r2.related_id)
         return r1.related_id < r2.related_id;
-    else
-        return r1.current_pos < r2.current_pos;
+    return r1.current_pos < r2.current_pos;
 }
 
 struct sort_pairs {
@@ -61,8 +60,8 @@ public:
         size_t bytes_alloc = 3*m_n/2;
         size_t lengths_alloc = bytes_alloc;
         
-        uint32_t *delta_buffer = reinterpret_cast<uint32_t *>(calloc(m_max_list_length, sizeof(uint32_t)));
-        m_lists = reinterpret_cast<uint8_t *>(calloc(bytes_alloc, sizeof(uint8_t)));
+        uint32_t *delta_buffer = static_cast<uint32_t *>(calloc(m_max_list_length, sizeof(uint32_t)));
+        m_lists = static_cast<uint8_t *>(calloc(bytes_alloc, sizeof(uint8_t)));
 
         m_lengths = sdsl::bit_vector(lengths_alloc, 0);
         m_sizes = sdsl::bit_vector(bytes_alloc, 0);
@@ -82,29 +81,36 @@ public:
 
             size_t length = 0;
             bool max_list_changed = false;
-            for (size_t i = 0; i < lists.size(); i++) {
-                if (lists[i].size() > m_max_list_length) {
-                    m_max_list_length = lists[i].size();
+            for (size_t j = 0; j < lists.size(); j++) {
+                if (lists[j].size() > m_max_list_length) {
+                    m_max_list_length = lists[j].size();
                     max_list_changed = true;
                 }
                 
-                max_bytes += streamvbyte_max_compressedbytes(lists[i].size());
-                length += lists[i].size();
+                max_bytes += streamvbyte_max_compressedbytes(lists[j].size());
+                length += lists[j].size();
             }
 
-            if (max_list_changed)
-                delta_buffer = (uint32_t*) realloc(delta_buffer, m_max_list_length * sizeof(uint32_t));
+            if (max_list_changed) {
+                delta_buffer = static_cast<uint32_t*>(realloc(delta_buffer, m_max_list_length * sizeof(uint32_t)));
+                if (delta_buffer == nullptr) {
+                    
+                }
+            }
             
             if (max_bytes >= bytes_alloc) {
                 size_t old_alloc = bytes_alloc;
                 bytes_alloc += (max_bytes - bytes_alloc)*2;
-                m_lists = (uint8_t*) realloc(m_lists, bytes_alloc * sizeof(uint8_t));
+                m_lists = static_cast<uint8_t*>(realloc(m_lists, bytes_alloc * sizeof(uint8_t)));
+                if (m_lists == nullptr) {
+
+                }
                 
                 m_sizes.resize(bytes_alloc);
 
-                for (size_t j = old_alloc; j < bytes_alloc; j++) {
-                    m_lists[j] = 0;
-                    m_sizes[j] = 0;
+                for (size_t k = old_alloc; k < bytes_alloc; k++) {
+                    m_lists[k] = 0;
+                    m_sizes[k] = 0;
                 }
             }
             
@@ -135,9 +141,9 @@ public:
     void save(std::ostream &os) const;
     void load(std::istream &is);
 
-    uint8_t *get_values(const std::vector<int> q, size_t *out_size);
+    uint8_t *get_values(const std::vector<int> &q, size_t *out_size);
 
-    size_t get_related(const std::vector<double> rmap, std::vector<std::pair<related, unsigned int> > *counts);
+    size_t get_related(const std::vector<double> &rmap, std::vector<std::pair<related, unsigned int> > *counts);
 
     std::vector<std::vector<uint32_t> > gather_lists(const std::string &in, size_t start, size_t end);
     void compress_lists(std::vector<std::vector<uint32_t> > lists, uint32_t *delta_buffer);
@@ -151,14 +157,14 @@ private:
     mergetable_t m_merge;
 
     int m_ell, m_mink;
-    size_t m_n, m_m;
+    size_t m_n;
     double m_quantization;
     char* m_gap_pattern;
 
     size_t m_sum_of_lengths, m_sum_of_sizes, m_max_list_length;
 };
 
-uint8_t *index_t::get_values(const std::vector<int> q, size_t *out_size) {
+uint8_t *index_t::get_values(const std::vector<int> &q, size_t *out_size) {
     const uint64_t u = m_mphf.lookup(q);
 
     uint64_t s, l, l1;
@@ -179,7 +185,7 @@ uint8_t *index_t::get_values(const std::vector<int> q, size_t *out_size) {
     return m_lists + s;
 }
 
-size_t index_t::get_related(const std::vector<double> rmap, std::vector<std::pair<related, unsigned int> > *counts) {
+size_t index_t::get_related(const std::vector<double> &rmap, std::vector<std::pair<related, unsigned int> > *counts) {
     std::vector<std::vector<int> > lmers = extract_lmers(rmap, m_ell, m_mink, m_quantization, m_gap_pattern);
 
     int exclude_id = counts->size() > 0 ? (*counts)[0].first.related_id : -1;
@@ -256,7 +262,7 @@ std::vector<std::vector<uint32_t> > index_t::gather_lists(const std::string &in,
     std::vector<std::vector<uint32_t> > lists(end - start + 1);
 
     std::vector<std::vector<double> > forward, reverse;
-    size_t rmap_count = read_rmaps(in.c_str(), 0, &forward, &reverse);
+    size_t rmap_count = read_rmaps(in.c_str(), nullptr, &forward, &reverse);
     for (size_t i = 0; i < rmap_count; i++) {
         std::vector<std::vector<int> > lmers_f = extract_lmers(forward[i], m_ell, m_mink, m_quantization, m_gap_pattern);
 
@@ -271,7 +277,7 @@ std::vector<std::vector<uint32_t> > index_t::gather_lists(const std::string &in,
             if (v < start || v >= end)
                 continue;
 
-            if (lists[v - start].size() != 0 && lists[v - start].back() == (uint32_t) i*2)
+            if (!lists[v - start].empty() && lists[v - start].back() == (uint32_t) i*2)
                 continue;
 
             lists[v - start].push_back((uint32_t) i*2);
@@ -290,7 +296,7 @@ std::vector<std::vector<uint32_t> > index_t::gather_lists(const std::string &in,
             if (v < start || v >= end)
                 continue;
 
-            if (lists[v - start].size() != 0 && lists[v - start].back() == (uint32_t) (i*2)+1)
+            if (!lists[v - start].empty() && lists[v - start].back() == (uint32_t) (i*2)+1)
                 continue;
 
             lists[v - start].push_back((uint32_t) (i*2)+1);
@@ -302,7 +308,7 @@ std::vector<std::vector<uint32_t> > index_t::gather_lists(const std::string &in,
 
 void index_t::compress_lists(std::vector<std::vector<uint32_t> > lists, uint32_t *delta_buffer) {
     for (size_t i = 0; i < lists.size(); i++) {
-        if (lists[i].size() == 0)
+        if (lists[i].empty())
             continue;
 
         std::sort(lists[i].begin(), lists[i].end());
@@ -339,7 +345,6 @@ void index_t::save(std::ostream& os) const {
     prev = os.tellp();
 
     os.write(reinterpret_cast<char const*>(&m_n), sizeof(size_t));
-    os.write(reinterpret_cast<char const*>(&m_m), sizeof(size_t));
     os.write(reinterpret_cast<char const*>(&m_sum_of_lengths), sizeof(size_t));
     os.write(reinterpret_cast<char const*>(&m_sum_of_sizes), sizeof(size_t));
     os.write(reinterpret_cast<char const*>(&m_max_list_length), sizeof(size_t));
@@ -378,7 +383,6 @@ void index_t::load(std::istream& is) {
     m_mphf.load(is);
     
     is.read(reinterpret_cast<char*>(&m_n), sizeof(size_t));
-    is.read(reinterpret_cast<char*>(&m_m), sizeof(size_t));
     is.read(reinterpret_cast<char*>(&m_sum_of_lengths), sizeof(size_t));
     is.read(reinterpret_cast<char*>(&m_sum_of_sizes), sizeof(size_t));
     is.read(reinterpret_cast<char*>(&m_max_list_length), sizeof(size_t));
