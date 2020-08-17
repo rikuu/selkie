@@ -11,12 +11,13 @@ In addition to everything included, Selkie also requires SDSL-lite.
 git clone --recursive https://github.com/rikuu/selkie
 cd selkie
 
-cd thirdparty/valouev/ && make && cd ..
-cd thirdparty/streamvbyte/ && make && cd ..
+cd thirdparty/emphf/ && cmake . && cd ../..
+cd thirdparty/valouev/ && make && cd ../..
+cd thirdparty/streamvbyte/ && make && cd ../..
 
 make
 
-./selkie-index -o index thirdparty/valouev/test/ecoli-2000.valouev
-./selkie-candidates thirdparty/valouev/test/ecoli-2000.valouev index > candidates.txt
-valouev/ovlp/ovlp2 thirdparty/valouev/test/ecoli-2000.valouev candidates.txt ecoli-2000.ovlps ecoli-2000-detailed.ovlps
+./selkie-index -o ecoli-2000.index thirdparty/valouev/test/ecoli-2000.valouev
+./selkie-candidates thirdparty/valouev/test/ecoli-2000.valouev ecoli-2000.index > candidates.txt
+thirdparty/valouev/ovlp/ovlp2 thirdparty/valouev/test/ecoli-2000.valouev candidates.txt ecoli-2000.ovlps ecoli-2000-detailed.ovlps
 ```
